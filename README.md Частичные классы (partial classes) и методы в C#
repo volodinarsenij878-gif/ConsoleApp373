@@ -1,0 +1,174 @@
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
+    namespace SpaceShuttleSystem
+    {
+    // ---------------------------------------------------------
+    // Часть 1: Core (аналог SpaceShuttle.Core.cs)
+    // Поля, свойства с валидацией, конструктор
+    // ---------------------------------------------------------
+    public partial class SpaceShuttle
+    {
+        private double _fuelKg;
+        private double _oxygenHours;
+        private int _hullIntegrity;
+
+        public string ShuttleName { get; set; }
+
+        public double FuelKg
+        {
+            get => _fuelKg;
+            set
+            {
+                if (value < 0)
+                {
+                    Console.WriteLine($"[Ошибка] Топливо не может быть отрицательным. Установлено 0.");
+                    _fuelKg = 0;
+                }
+                else
+                {
+                    _fuelKg = value;
+                }
+            }
+        }
+
+        public int HullIntegrity
+        {
+            get => _hullIntegrity;
+            set
+            {
+                 
+            }
+        }
+
+        public bool IsOperational => _hullIntegrity > 15 && _oxygenHours > 0;
+
+        public SpaceShuttle(string name, double fuel, double oxygen, int integrity)
+        {
+            this.ShuttleName = name;
+            this.FuelKg = fuel;
+            this._oxygenHours = oxygen;
+            this.HullIntegrity = integrity;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Часть 2: Engines (аналог SpaceShuttle.Engines.cs)
+    // Логика двигателей и манёвров
+    // ---------------------------------------------------------
+    public partial class SpaceShuttle
+    {
+        public void ExecuteOrbitalBurn(double burnTimeSeconds, double thrustPower)
+        {
+            double fuelConsumption = burnTimeSeconds * thrustPower * 2.5;
+
+            if (_fuelKg < fuelConsumption)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"[ПРЕДУПРЕЖДЕНИЕ] Недостаточно топлива для прожига! Требуется: {fuelConsumption:F1} кг, доступно: {_fuelKg:F1} кг.");
+                Console.ResetColor();
+                return;
+            }
+
+            _fuelKg -= fuelConsumption;
+
+            int integrityLoss = (int)(burnTimeSeconds / 10.0);
+            HullIntegrity -= integrityLoss;
+
+            Console.WriteLine($"[Двигатели] Прожиг выполнен: время={burnTimeSeconds} с, тяга={thrustPower} ед., расход={fuelConsumption:F1} кг. Потеря прочности: {integrityLoss}%.");
+        }
+
+        public void PerformAtmosphericEntry()
+        {
+            Random rnd = new Random();
+            int damage = rnd.Next(10, 26); // от 10 до 25 включительно
+            HullIntegrity -= damage;
+
+            double oxygenConsumed = 1.5;
+            _oxygenHours -= oxygenConsumed;
+            if (_oxygenHours < 0) _oxygenHours = 0;
+
+            Console.WriteLine($"[Атмосфера] Вход выполнен: потеря прочности={damage}%, расход кислорода={oxygenConsumed} ч.");
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Часть 3: Diagnostics (аналог SpaceShuttle.Diagnostics.cs)
+    // Частичный метод, диагностика, телеметрия
+    // ---------------------------------------------------------
+    public partial class SpaceShuttle
+    {
+        partial void OnCriticalSystemAlert(string systemName, string message);
+
+        partial void OnCriticalSystemAlert(string systemName, string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("==========================================================");
+            Console.WriteLine($"[ТРЕВОГА БОРТОВОГО КОМПЬЮТЕРА]");
+            Console.WriteLine($"Система: {systemName}");
+            Console.WriteLine($"Сообщение: {message}");
+            Console.WriteLine("==========================================================");
+            Console.ResetColor();
+        }
+
+        public void CheckSystems()
+        {
+            if (_fuelKg < 500)
+            {
+                OnCriticalSystemAlert("Топливная система", "Критический остаток топлива!");
+            }
+
+            if (_hullIntegrity < 25)
+            {
+                OnCriticalSystemAlert("Контур обшивки", "Опасность разрушения корпуса!");
+            }
+        }
+
+        public void PrintTelemetry()
+        {
+            Console.WriteLine(new string('-', 60));
+            Console.WriteLine($"ТЕЛЕМЕТРИЯ ШАТТЛА: {ShuttleName}");
+            Console.WriteLine(new string('-', 60));
+            Console.WriteLine($"Топливо:             {_fuelKg,10:F1} кг");
+            Console.WriteLine($"Кислород:            {_oxygenHours,10:F1} ч");
+            Console.WriteLine($"Прочность корпуса:   {_hullIntegrity,10} %");
+            Console.WriteLine($"Статус:              {(IsOperational ? "РАБОТОСПОСОБЕН" : "НЕРАБОТОСПОСОБЕН")}");
+            Console.WriteLine(new string('-', 60));
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Часть 4: Program (Program.cs)
+    // Точка входа и сценарий полёта
+    // ---------------------------------------------------------
+    class Program
+    {
+        static void Main()
+        {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.Title = "Бортовой модуль космического шаттла";
+
+            var shuttle = new SpaceShuttle("Буран-Next", 2400.0, 48.0, 100);
+
+            shuttle.PrintTelemetry();
+
+            Console.WriteLine("\n--- НАЧАЛО ПОЛЕТНОГО ЦИКЛА ---\n");
+
+            shuttle.ExecuteOrbitalBurn(15, 8.0);
+            shuttle.CheckSystems();
+
+            shuttle.ExecuteOrbitalBurn(60, 15.0);
+            shuttle.PerformAtmosphericEntry();
+            shuttle.CheckSystems();
+
+            Console.WriteLine("\n--- ФИНАЛЬНОЕ СОСТОЯНИЕ ---\n");
+            shuttle.PrintTelemetry();
+
+            Console.WriteLine("\nНажмите любую клавишу для завершения...");
+            Console.ReadKey();
+        }
+    }
+}
